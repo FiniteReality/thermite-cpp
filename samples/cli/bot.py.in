@@ -1,0 +1,48 @@
+import subprocess
+import json
+import discord
+
+# config or whatevs
+TOKEN = os.environ['BOT_TOKEN']
+VOICE_GUILD_ID = int(os.environ['BOT_GUILD_ID'])
+VOICE_CHANNEL_ID = int(os.environ['BOT_CHANNEL_ID'])
+
+# program goes here
+client = discord.Client()
+
+@client.event
+async def on_socket_response(data):
+    if not data:
+        return
+    if data['op'] != 0:
+        return
+
+    if data['t'] == 'VOICE_SERVER_UPDATE':
+        guild_id = data['d']['guild_id']
+        user_id = str(client.user.id)
+        endpoint = data['d']['endpoint']
+        token = data['d']['token']
+        session = client.get_guild(int(guild_id)).me.voice.session_id
+
+        print("guild id: " + guild_id)
+        print("user id: " + user_id)
+        print("endpoint: " + endpoint)
+        print("session: " + session)
+        print("token: " + token)
+
+        subprocess.Popen(['./cli', guild_id, user_id, endpoint, session, token], close_fds=True)
+
+
+@client.event
+async def on_ready():
+    await client.ws.send(json.dumps({
+        'op': 4,
+        'd': {
+            'self_deaf': False,
+            'guild_id': str(VOICE_GUILD_ID),
+            'channel_id': str(VOICE_CHANNEL_ID),
+            'self_mute': False
+        }
+    }))
+
+client.run(TOKEN)

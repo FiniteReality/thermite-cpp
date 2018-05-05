@@ -1,0 +1,6 @@
+# Build outputs
+build
+
+# Editor files
+.kdev4
+thermite.kdev4
