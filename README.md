@@ -22,7 +22,7 @@ $ make
 
 - `THERMITE_DEBUG`: Enable debug logging (default: ON)
 - `THERMITE_BUILD_SAMPLES`: Build samples (default: ON)
-- `THERMITE_BUILD_SAMPLE_<<NAME>>`: Build thermite sample <<NAME>> (default: ON)
+- `THERMITE_BUILD_SAMPLE_<<NAME>>`: Build thermite sample `NAME` (default: ON)
 
 ### Samples ###
 
