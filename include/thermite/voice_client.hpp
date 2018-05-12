@@ -5,12 +5,13 @@
 #include "discord/voice_opcode.hpp"
 #include "discord/voice_mode.hpp"
 
+#define RAPIDJSON_HAS_STDSTRING 1
+
 #include <rapidjson/document.h>
-#include <uv.h>
 #include <uWS/uWS.h>
 
-#include <map>
 #include <string>
+#include <vector>
 
 namespace thermite
 {
@@ -29,6 +30,12 @@ void onWSConnect(
     uWS::WebSocket<false>* wsClient,
     uWS::HttpRequest);
 
+void onWSDisconnect(
+    uWS::WebSocket<false>* wsClient,
+    int code,
+    const char* message,
+    size_t length);
+
 void onSocketData(
     uv_udp_t* handle,
     ssize_t read,
@@ -41,6 +48,15 @@ void onSocketData(
 class voice_client
 {
 public:
+    voice_client();
+
+    ~voice_client();
+
+    voice_client(const voice_client& other) = delete;
+    voice_client(voice_client&& other) = delete;
+    voice_client& operator=(const voice_client& other) = delete;
+    voice_client& operator=(voice_client&& other) = delete;
+
     /*!\brief Connects to a Discord voice server with the given endpoint and
      *        authentication.
      *
@@ -61,69 +77,98 @@ public:
      */
     void disconnect();
 
-    void play_file(std::string location);
+    void set_speaking(bool speaking);
+
+    void sendOpusFrame(
+        const std::vector<unsigned char>& frame,
+        int frame_ms);
 
 private:
     using rapidJsonArray = rapidjson::Document::ValueType::Array;
 
     bool _listen;
-    uv_timer_t _heartbeat_timer;
+    uv_timer_t _heartbeatTimer;
     uv_udp_t _socket;
-    uWS::WebSocket<false>* _websocket;
+    uWS::WebSocket<false>* _webSocket;
 
-    std::string _server_id;
-    std::string _user_id;
-    std::string _session;
+    std::string _serverId;
+    std::string _userId;
+    std::string _sessionId;
     std::string _token;
 
     uint64_t _nonce;
-    uint64_t _last_received_nonce;
-    int _ssrc;
-    struct sockaddr_in _send_addr;
+    uint64_t _lastReceivedNonce;
+    struct sockaddr_in _sendAddr;
     voice_mode _mode;
-    std::vector<unsigned char> _secret;
 
-    void sendWSMessage(rapidjson::Document& document);
+    std::vector<unsigned char> _secret;
+    uint16_t _sequence;
+    uint32_t _timestamp;
+    int32_t _ssrc;
+    uint64_t _lastKeepalive;
+
+    // GENERAL
+    static std::string getVersionedUri(std::string endpoint);
+
+    // OUTGOING
+    void sendWSMessage(rapidjson::Document& doc);
+
+
+    template <voice_opcode opcode>
+    void sendOpcode(rapidjson::Value&& data)
+    {
+        rapidjson::Document doc;
+        auto& allocator = doc.GetAllocator();
+        doc.SetObject();
+
+        doc.AddMember("op", static_cast<int>(opcode), allocator);
+        doc.AddMember("d", std::move(data), allocator);
+
+        sendWSMessage(doc);
+    };
+
+    // WEBSOCKET METHODS
+    void sendHeartbeat();
+    void sendIdentify();
+    void sendSpeaking(bool isSpeaking);
+
+    void negotiateEncryptionMode(const rapidJsonArray& modes);
+    void finishNegotiateEncryptionMode(std::string ip, unsigned short port);
+
+    // UDP METHODS
+    void sendDiscovery();
+    void sendKeepalive();
+
+    // EVENTS
+    void onWSConnect(uWS::WebSocket<false>* client);
+    void onWSDisconnect(int code, std::string message);
 
     void onSocketMessage(
         ssize_t read,
         const uv_buf_t* buf,
         const struct sockaddr* addr,
         unsigned flags);
-
     void onWSMessage(
         const char* data,
         size_t count,
         uWS::OpCode opcode);
 
-    void handleOpcode(
-            voice_opcode opcode,
-        rapidjson::Document& document);
+    void onOpcode(voice_opcode opcode, rapidjson::Document& document);
 
-    void handleHeartbeatAck(uint64_t nonce);
-    void beginHeartbeatThread(
-        int intervalMs);
-
-    void sendIdentify();
-
-    void negotiateEncryptionMode(
-        const rapidJsonArray& modes);
-    void finishNegotiateEncryptionMode(std::string ip, unsigned short port);
-
-    void sendDiscovery();
-
-    static std::string getVersionedUri(std::string endpoint);
-
+    // GLOBAL EVENTS
     friend void detail::onWSMessage(
         uWS::WebSocket<false>* wsClient,
         const char* data,
         size_t size,
         uWS::OpCode opcode);
-
     friend void detail::onWSConnect(
         uWS::WebSocket<false>* wsClient,
         uWS::HttpRequest);
-
+    friend void detail::onWSDisconnect(
+        uWS::WebSocket<false>* wsClient,
+        int code,
+        const char* message,
+        size_t length);
     friend void detail::onSocketData(
         uv_udp_t* handle,
         ssize_t read,

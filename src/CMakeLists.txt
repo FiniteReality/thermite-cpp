@@ -1,16 +1,32 @@
+find_package(uv REQUIRED)
+find_package(RapidJSON REQUIRED)
+find_package(TBB REQUIRED)
+find_package(uWS REQUIRED)
+find_package(sodium REQUIRED)
+
 if(THERMITE_DEBUG)
     message(STATUS "Building thermite with debug logging enabled")
     add_definitions(-DTHERMITE_DEBUG)
 endif(THERMITE_DEBUG)
 
 set(THERMITE_SRCS
-discord/voice_client.cpp discord/opcode.cpp discord/heartbeat.cpp
-discord/udp.cpp
+discord/voice_client.cpp discord/ws_events.cpp discord/protocol.cpp
+discord/udp.cpp discord/debug.cpp
 
-socket_thread.cpp util.cpp)
+socket_hub.cpp)
 
 add_library(thermite SHARED ${THERMITE_SRCS})
-add_dependencies(thermite uWebSockets)
+add_dependencies(thermite uWS)
 
-target_link_libraries(thermite PUBLIC ${LIBUV_LIBRARY} ${uWS_LIBRARIES})
-target_include_directories(thermite PUBLIC ../include)
+target_link_libraries(thermite PUBLIC
+    ${uWS_LIBRARIES}
+    ${TBB_LIBRARIES}
+    ${sodium_LIBRARIES})
+target_include_directories(thermite PUBLIC
+    ${PROJECT_SOURCE_DIR}/include
+    ${RapidJSON_INCLUDE_DIRS}
+    ${uv_INCLUDE_DIRS}
+    ${uvw_INCLUDE_DIRS}
+    ${uWS_INCLUDE_DIRS}
+    ${TBB_INCLUDE_DIRS}
+    ${sodium_INCLUDE_DIRS})

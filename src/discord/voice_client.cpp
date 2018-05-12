@@ -10,6 +10,25 @@
 
 using namespace thermite::discord;
 
+voice_client::voice_client()
+    : _listen{false}, _heartbeatTimer {}, _socket{}, _webSocket{}, _nonce{0},
+    _lastReceivedNonce {0}, _sendAddr {}, _mode{voice_mode::Unknown},
+    _secret{}, _sequence{0}, _timestamp{0}, _ssrc{0}, _lastKeepalive{0}
+{
+    uv_timer_init(detail::getUvLoop(), &_heartbeatTimer);
+    _heartbeatTimer.data = this;
+
+    uv_udp_init(detail::getUvLoop(), &_socket);
+    _socket.data = this;
+}
+
+voice_client::~voice_client()
+{
+    disconnect();
+    uv_close(reinterpret_cast<uv_handle_t*>(&_heartbeatTimer), nullptr);
+    uv_close(reinterpret_cast<uv_handle_t*>(&_socket), nullptr);
+}
+
 void voice_client::connect(
     std::string server_id,
     std::string user_id,
@@ -19,11 +38,11 @@ void voice_client::connect(
 {
     _listen = true;
     _nonce = 0;
-    _last_received_nonce = 0;
+    _lastReceivedNonce = 0;
 
-    _server_id = server_id;
-    _user_id = user_id;
-    _session = session;
+    _serverId = server_id;
+    _userId = user_id;
+    _sessionId = session;
     _token = token;
 
     auto url = getVersionedUri(endpoint);
@@ -33,14 +52,25 @@ void voice_client::connect(
 
 void voice_client::disconnect()
 {
-    uv_timer_stop(&_heartbeat_timer);
-    _websocket->close();
+    uv_timer_stop(&_heartbeatTimer);
+    _webSocket->close();
     _listen = false;
 }
 
-void voice_client::play_file(std::string location)
-{ }
+void voice_client::set_speaking(bool speaking)
+{
+    sendSpeaking(speaking);
+}
 
+void voice_client::onWSConnect(uWS::WebSocket<false>* client)
+{
+    this->_webSocket = client;
+}
+
+void voice_client::onWSDisconnect(int code, std::string message)
+{
+    DEBUG_LOG("WebSocket close: " << code << " (" << message << ")");
+}
 
 void voice_client::sendWSMessage(rapidjson::Document& document)
 {
@@ -48,7 +78,9 @@ void voice_client::sendWSMessage(rapidjson::Document& document)
     rapidjson::Writer<rapidjson::StringBuffer> writer{buf};
     document.Accept(writer);
 
-    _websocket->send(buf.GetString(), buf.GetSize(), uWS::OpCode::TEXT);
+    DEBUG_LOG("SEND: " << buf.GetString());
+
+    _webSocket->send(buf.GetString(), buf.GetSize(), uWS::OpCode::TEXT);
 }
 
 void voice_client::onWSMessage(
@@ -56,6 +88,9 @@ void voice_client::onWSMessage(
     size_t count,
     uWS::OpCode opcode)
 {
+    std::string msg{data, count};
+    DEBUG_LOG("RECV: " << msg);
+
     switch (opcode)
     {
         case uWS::OpCode::TEXT:
@@ -64,7 +99,7 @@ void voice_client::onWSMessage(
             d.Parse(data, count);
             rapidjson::Value& opcode = d["op"];
             auto discord_op = static_cast<voice_opcode>(opcode.GetInt());
-            handleOpcode(discord_op, d);
+            onOpcode(discord_op, d);
             break;
         }
         default:

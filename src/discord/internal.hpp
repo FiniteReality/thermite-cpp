@@ -18,7 +18,7 @@ namespace detail
 void connect(std::string uri,
                 discord::voice_client* client);
 
-uv_loop_t* get_uv_loop();
+uv_loop_t* getUvLoop();
 
 }
 

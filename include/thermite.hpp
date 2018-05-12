@@ -12,7 +12,7 @@
 
 namespace thermite
 {
-    void start_socket_thread();
+    void start_event_loop();
 }
 
 #endif /* THERMITE_HPP */
