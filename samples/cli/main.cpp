@@ -31,7 +31,7 @@ bool speaking;
 #define FRAME_SAMPLES_PER_CHANNEL (SAMPLE_RATE / 1000 * FRAME_MILLIS)
 #define FRAME_BYTES (FRAME_SAMPLES_PER_CHANNEL * SAMPLE_BYTES)
 
-#define MAX_DATA_SIZE 64
+#define MAX_DATA_SIZE 4096
 
 void send_voice(uv_timer_t*)
 {
@@ -62,8 +62,12 @@ void send_voice(uv_timer_t*)
         encoded.data(),
         MAX_DATA_SIZE);
 
-    encoded.resize(encoded_length);
-    client.sendOpusFrame(encoded, FRAME_MILLIS);
+    if (encoded_length > 0) {
+        encoded.resize(encoded_length);
+        client.sendOpusFrame(encoded, FRAME_MILLIS);
+    } else {
+        std::cout << "opus error: " << encoded_length << std::endl;
+    }
 }
 
 int main(int argc, char* argv[])
