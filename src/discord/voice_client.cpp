@@ -11,7 +11,7 @@
 using namespace thermite::discord;
 
 voice_client::voice_client()
-    : _listen{false}, _heartbeatTimer {}, _socket{}, _webSocket{}, _nonce{0},
+    : _heartbeatTimer {}, _socket{}, _webSocket{}, _nonce{0},
     _lastReceivedNonce {0}, _sendAddr {}, _mode{voice_mode::Unknown},
     _secret{}, _sequence{0}, _timestamp{0}, _ssrc{0}, _lastKeepalive{0}
 {
@@ -20,6 +20,8 @@ voice_client::voice_client()
 
     uv_udp_init(detail::getUvLoop(), &_socket);
     _socket.data = this;
+
+    beginUdpReceive();
 }
 
 voice_client::~voice_client()
@@ -36,7 +38,6 @@ void voice_client::connect(
     std::string session,
     std::string token)
 {
-    _listen = true;
     _nonce = 0;
     _lastReceivedNonce = 0;
 
@@ -52,9 +53,9 @@ void voice_client::connect(
 
 void voice_client::disconnect()
 {
+    stopUdpReceive();
     uv_timer_stop(&_heartbeatTimer);
     _webSocket->close();
-    _listen = false;
 }
 
 void voice_client::set_speaking(bool speaking)

@@ -11,7 +11,7 @@ endif(THERMITE_DEBUG)
 
 set(THERMITE_SRCS
 discord/voice_client.cpp discord/ws_events.cpp discord/protocol.cpp
-discord/udp.cpp discord/debug.cpp
+discord/udp.cpp discord/udp_buffer.cpp discord/debug.cpp
 
 socket_hub.cpp)
 

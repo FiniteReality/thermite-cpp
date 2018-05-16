@@ -86,7 +86,6 @@ public:
 private:
     using rapidJsonArray = rapidjson::Document::ValueType::Array;
 
-    bool _listen;
     uv_timer_t _heartbeatTimer;
     uv_udp_t _socket;
     uWS::WebSocket<false>* _webSocket;
@@ -113,7 +112,6 @@ private:
     // OUTGOING
     void sendWSMessage(rapidjson::Document& doc);
 
-
     template <voice_opcode opcode>
     void sendOpcode(rapidjson::Value&& data)
     {
@@ -138,6 +136,9 @@ private:
     // UDP METHODS
     void sendDiscovery();
     void sendKeepalive();
+
+    void beginUdpReceive();
+    void stopUdpReceive();
 
     // EVENTS
     void onWSConnect(uWS::WebSocket<false>* client);

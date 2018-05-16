@@ -1,9 +1,6 @@
-#include <atomic>
 #include <fstream>
 #include <iostream>
 #include <opus/opus.h>
-#include <tbb/concurrent_queue.h>
-#include <thread>
 
 #include <thermite.hpp>
 #include <thermite/voice_client.hpp>
@@ -26,22 +23,23 @@ thermite::discord::voice_client client;
 OpusEncoder* encoder;
 std::ifstream file;
 bool speaking;
-uv_work_t work;
-tbb::concurrent_bounded_queue<std::vector<unsigned char>> buffers;
 
 #define SAMPLE_RATE 48000
 #define CHANNELS 2
 #define FRAME_MILLIS 20
 #define SAMPLE_BYTES (CHANNELS * sizeof(opus_int16))
 #define FRAME_SAMPLES_PER_CHANNEL (SAMPLE_RATE / 1000 * FRAME_MILLIS)
-#define FRAME_SAMPLES (FRAME_SAMPLES_PER_CHANNEL * CHANNELS)
 #define FRAME_BYTES (FRAME_SAMPLES_PER_CHANNEL * SAMPLE_BYTES)
 
-#define MAX_DATA_SIZE 2048
+#define MAX_DATA_SIZE 64
 
-void transcode(uv_work_t*)
+void send_voice(uv_timer_t*)
 {
-    std::cout << "transcoding a frame" << std::endl;
+    if (!speaking)
+    {
+        speaking = true;
+        client.set_speaking(speaking);
+    }
 
     char data[FRAME_BYTES];
     opus_int16* pcm = reinterpret_cast<opus_int16*>(data);
@@ -65,32 +63,7 @@ void transcode(uv_work_t*)
         MAX_DATA_SIZE);
 
     encoded.resize(encoded_length);
-    if (buffers.size() < buffers.capacity())
-        buffers.push(std::move(encoded));
-}
-
-void do_send(uv_work_t*, int)
-{
-    std::vector<unsigned char> buffer;
-    buffers.pop(buffer);
-    client.sendOpusFrame(buffer, FRAME_MILLIS);
-}
-
-void send_voice(uv_timer_t*)
-{
-    if (!speaking)
-    {
-        speaking = true;
-        client.set_speaking(speaking);
-    }
-
-    std::cout << "sending data" << std::endl;
-
-   /*uv_queue_work(
-        thermite::discord::detail::getUvLoop(),
-        &work,
-        &transcode,
-        &do_send);*/
+    client.sendOpusFrame(encoded, FRAME_MILLIS);
 }
 
 int main(int argc, char* argv[])
@@ -114,7 +87,6 @@ int main(int argc, char* argv[])
     std::string fileName{argv[6]};
 
     file.open(fileName);
-    buffers.set_capacity(25);
 
     int status;
     encoder = opus_encoder_create(
@@ -129,10 +101,10 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    opus_encoder_ctl(encoder, OPUS_SET_BITRATE(OPUS_BITRATE_MAX));
-    opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(10));
     opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_MUSIC));
     opus_encoder_ctl(encoder, OPUS_SET_PACKET_LOSS_PERC(20));
+    opus_encoder_ctl(encoder, OPUS_SET_INBAND_FEC(1));
+    opus_encoder_ctl(encoder, OPUS_SET_BITRATE(96 * 1024)); // 96kb/s
 
     uv_timer_t timer;
     uv_timer_init(thermite::discord::detail::getUvLoop(), &timer);
