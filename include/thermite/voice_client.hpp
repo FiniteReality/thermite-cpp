@@ -67,21 +67,26 @@ public:
      * \param token The token to authenticate with
      */
     void connect(
-        std::string server_id,
-        std::string client_id,
-        std::string endpoint,
-        std::string session,
-        std::string token);
+        const std::string& server_id,
+        const std::string& user_id,
+        const std::string& endpoint,
+        const std::string& session,
+        const std::string& token);
 
     /*!\brief Disconnects from Discord
      */
     void disconnect();
 
+    /*!\brief Updates the speaking status with Discord.
+     * \param speaking Set to true to indicate that we intend to send UDP data
+     */
     void set_speaking(bool speaking);
 
-    void sendOpusFrame(
+    /*!\brief Sends an opus packet to Discord
+     */
+    void send_opus_packet(
         const std::vector<unsigned char>& frame,
-        int frame_ms);
+        uint32_t frame_samples);
 
 private:
     using rapidJsonArray = rapidjson::Document::ValueType::Array;
@@ -89,9 +94,11 @@ private:
     uv_timer_t _heartbeatTimer;
     uv_udp_t _socket;
     uWS::WebSocket<false>* _webSocket;
+    bool _resuming;
 
     std::string _serverId;
     std::string _userId;
+    std::string _endpoint;
     std::string _sessionId;
     std::string _token;
 
@@ -123,10 +130,11 @@ private:
         doc.AddMember("d", std::move(data), allocator);
 
         sendWSMessage(doc);
-    };
+    }
 
     // WEBSOCKET METHODS
     void sendHeartbeat();
+    void sendResume();
     void sendIdentify();
     void sendSpeaking(bool isSpeaking);
 
@@ -135,14 +143,13 @@ private:
 
     // UDP METHODS
     void sendDiscovery();
-    void sendKeepalive();
 
     void beginUdpReceive();
     void stopUdpReceive();
 
     // EVENTS
     void onWSConnect(uWS::WebSocket<false>* client);
-    void onWSDisconnect(int code, std::string message);
+    void onWSDisconnect(int code, const std::string& message);
 
     void onSocketMessage(
         ssize_t read,

@@ -1,5 +1,3 @@
-#include <fstream>
-
 #include <thermite.hpp>
 #include <thermite/voice_client.hpp>
 
@@ -11,7 +9,8 @@
 using namespace thermite::discord;
 
 voice_client::voice_client()
-    : _heartbeatTimer {}, _socket{}, _webSocket{}, _nonce{0},
+    : _heartbeatTimer {}, _socket{}, _webSocket{}, _resuming{false},
+    _serverId{}, _userId{}, _endpoint{}, _sessionId{}, _token{}, _nonce{0},
     _lastReceivedNonce {0}, _sendAddr {}, _mode{voice_mode::Unknown},
     _secret{}, _sequence{0}, _timestamp{0}, _ssrc{0}, _lastKeepalive{0}
 {
@@ -32,11 +31,11 @@ voice_client::~voice_client()
 }
 
 void voice_client::connect(
-    std::string server_id,
-    std::string user_id,
-    std::string endpoint,
-    std::string session,
-    std::string token)
+    const std::string& server_id,
+    const std::string& user_id,
+    const std::string& endpoint,
+    const std::string& session,
+    const std::string& token)
 {
     _nonce = 0;
     _lastReceivedNonce = 0;
@@ -46,9 +45,9 @@ void voice_client::connect(
     _sessionId = session;
     _token = token;
 
-    auto url = getVersionedUri(endpoint);
-    DEBUG_LOG("connecting to: " << url);
-    detail::connect(url, this);
+    _endpoint = getVersionedUri(endpoint);
+    DEBUG_LOG("connecting to: " << _endpoint);
+    detail::connect(_endpoint, this);
 }
 
 void voice_client::disconnect()
@@ -68,9 +67,16 @@ void voice_client::onWSConnect(uWS::WebSocket<false>* client)
     this->_webSocket = client;
 }
 
-void voice_client::onWSDisconnect(int code, std::string message)
+void voice_client::onWSDisconnect(int code, const std::string& message)
 {
     DEBUG_LOG("WebSocket close: " << code << " (" << message << ")");
+
+    disconnect();
+
+    _resuming = !_resuming;
+
+    DEBUG_LOG("connecting to: " << _endpoint);
+    detail::connect(_endpoint, this);
 }
 
 void voice_client::sendWSMessage(rapidjson::Document& document)

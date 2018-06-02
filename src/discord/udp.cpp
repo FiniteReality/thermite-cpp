@@ -5,10 +5,11 @@
 #include "udp_internal.hpp"
 
 #include <sodium.h>
+#include <type_traits>
 
 using namespace thermite::discord;
 
-static inline void sendUdp(
+inline void sendUdp(
     uv_udp_t* handle,
     struct sockaddr* addr,
     detail::renter&& rent)
@@ -23,53 +24,70 @@ static inline void sendUdp(
         });
 }
 
-template <class T>
+template <typename T,
+    int N = sizeof(T) * 8,
+    typename std::enable_if<std::is_integral<T>::value>::type* = nullptr>
+inline T swapEndianness(T value)
+{
+    T result = 0;
+
+    for (int i = 0; i < N; i += 8)
+    {
+        result |= ((value >> i) & 0xFF) << (N - i - 8);
+    }
+
+    return result;
+}
+
+
+template <typename T,
+    typename std::enable_if<std::is_integral<T>::value>::type* = nullptr>
 inline void writeIntoPacket(
     std::vector<unsigned char>& packet,
     size_t pos,
     T value)
 {
     T* ptr = reinterpret_cast<T*>(packet.data() + pos);
-    ptr[0] = value;
-    // HACK: this does not support big-endian systems!
-    std::reverse(packet.data() + pos, packet.data() + pos + sizeof(value));
+    // TODO: only swap if needed
+    ptr[0] = swapEndianness(value);
 }
 
-void voice_client::sendOpusFrame(
+void voice_client::send_opus_packet(
     const std::vector<unsigned char>& frame,
-    int frame_ms)
+    uint32_t frame_samples)
 {
     detail::renter buffer{
         12 + // header size
-        frame.size() + // ciphertext
-        crypto_secretbox_MACBYTES}; // mac (from crypto_secretbox)
+        frame.size() + // message length
+        crypto_secretbox_MACBYTES}; // plus mac bytes for ciphertext length
     auto& packet = buffer.buffer();
-    packet[0] = 0x80; packet[1] = 0x78;
 
+    packet[0] = 0x80; packet[1] = 0x78;
     writeIntoPacket(packet, 2, _sequence);
     writeIntoPacket(packet, 4, _timestamp);
     writeIntoPacket(packet, 8, _ssrc);
 
     _sequence++;
-    _timestamp += frame_ms;
+    _timestamp += frame_samples;
 
     unsigned char nonce[crypto_secretbox_NONCEBYTES];
     memset(nonce, 0, crypto_secretbox_NONCEBYTES);
-    size_t nonce_size = 0;
+    size_t nonce_append_bytes = 0;
 
     switch (_mode)
     {
         case voice_mode::XSalsa20_Poly1305_Lite:
             randombytes_buf(nonce, 4);
-            nonce_size = 4;
+            nonce_append_bytes = 4;
             break;
         case voice_mode::XSalsa20_Poly1305_Suffix:
             randombytes_buf(nonce, crypto_secretbox_NONCEBYTES);
-            nonce_size = crypto_secretbox_NONCEBYTES;
+            nonce_append_bytes = crypto_secretbox_NONCEBYTES;
             break;
         case voice_mode::XSalsa20_Poly1305:
+            // No data to append since it's purely the header
             memcpy(nonce, packet.data(), 12);
-            nonce_size = 0;
+            nonce_append_bytes = 0;
             break;
         case voice_mode::Unknown:
             break;
@@ -83,11 +101,12 @@ void voice_client::sendOpusFrame(
         nonce,
         _secret.data());
 
-    if (nonce_size > 0)
+    // Append the nonce at the end of the packet if it is needed
+    if (nonce_append_bytes > 0)
     {
         size_t initial = packet.size();
-        packet.resize(packet.size() + nonce_size);
-        memcpy(packet.data() + initial, nonce, nonce_size);
+        packet.resize(initial + nonce_append_bytes);
+        memcpy(packet.data() + initial, nonce, nonce_append_bytes);
     }
 
     sendUdp(&_socket,
@@ -107,19 +126,6 @@ void voice_client::sendDiscovery()
     sendUdp(&_socket,
             reinterpret_cast<struct sockaddr*>(&_sendAddr),
             std::move(buffer));
-}
-
-void voice_client::sendKeepalive()
-{
-    DEBUG_LOG("Sending keepalive");
-    detail::renter buffer{8};
-    auto& packet = buffer.buffer();
-
-    writeIntoPacket(packet, 0, _lastKeepalive++);
-
-    sendUdp(&_socket,
-        reinterpret_cast<struct sockaddr*>(&_sendAddr),
-        std::move(buffer));
 }
 
 void detail::onSocketData(
@@ -145,7 +151,7 @@ void detail::onSocketData(
     }
 
     // NOTE: see below for why we do this
-    delete buf->base;
+    delete[] buf->base;
     client->stopUdpReceive();
 }
 
@@ -177,7 +183,6 @@ static void mallocReceiveBuffer(
     size_t suggested_size,
     uv_buf_t* buf)
 {
-    char* data = new char[suggested_size];
-    buf->base = data;
+    buf->base = new char[suggested_size];
     buf->len = suggested_size;
 }

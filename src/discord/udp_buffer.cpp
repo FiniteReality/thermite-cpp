@@ -29,17 +29,17 @@ static void returnBuffer(std::vector<unsigned char>&& buffer)
     buffers.push(std::move(buffer));
 }
 
-detail::renter::renter(size_t size)
+detail::renter::renter(size_t size) noexcept
     : _buffer{rentBuffer(size)}, _valid{true}
 { }
 
-detail::renter::renter(renter&& other)
-    : _buffer{std::move(other._buffer)}, _valid{true}
+detail::renter::renter(renter&& other) noexcept
+    : _buffer{other._buffer}, _valid{true}
 {
     other._valid = false;
 }
 
-detail::renter& detail::renter::operator=(renter&& other)
+detail::renter& detail::renter::operator=(renter&& other) noexcept
 {
     if (this != &other)
     {
@@ -51,7 +51,7 @@ detail::renter& detail::renter::operator=(renter&& other)
     return *this;
 }
 
-detail::renter::~renter()
+detail::renter::~renter() noexcept
 {
     if (_valid)
     {
@@ -59,21 +59,12 @@ detail::renter::~renter()
     }
 }
 
-std::vector<unsigned char> detail::renter::useBuffer(
-    std::vector<unsigned char>&& buffer)
-{
-    auto old_buffer = _buffer;
-    _buffer = std::move(buffer);
-    _valid = true;
-    return old_buffer;
-}
-
 std::vector<unsigned char>& detail::renter::buffer()
 {
     return _buffer;
 }
 
-detail::udpSendData::udpSendData(detail::renter&& rent)
+detail::udpSendData::udpSendData(detail::renter&& rent) noexcept
     : _rent{std::move(rent)}, _buf{}, _send{}
 {
     char* uv_data = reinterpret_cast<char*>(_rent.buffer().data());

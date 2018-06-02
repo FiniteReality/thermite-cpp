@@ -35,7 +35,14 @@ void voice_client::onOpcode(
                 self->sendHeartbeat();
             }, 0, interval);
 
-            sendIdentify();
+            if (_resuming)
+            {
+                sendResume();
+            }
+            else
+            {
+                sendIdentify();
+            }
             break;
         }
         case voice_opcode::Ready:
@@ -47,9 +54,22 @@ void voice_client::onOpcode(
             auto port = d["port"].GetInt();
 
             // TODO: figure out what this returns
-            uv_ip4_addr(ip, port, &_sendAddr);
+            auto status = uv_ip4_addr(ip, port, &_sendAddr);
+            if (status != 0)
+            {
+                throw std::runtime_error{
+                    "error occured translating ip/port to address"};
+            }
 
-            negotiateEncryptionMode(d["modes"].GetArray());
+            if (!_resuming)
+            {
+                negotiateEncryptionMode(d["modes"].GetArray());
+            }
+            break;
+        }
+        case voice_opcode::Resumed:
+        {
+            _resuming = false;
             break;
         }
         case voice_opcode::SessionDescription:
@@ -90,6 +110,27 @@ void voice_client::sendHeartbeat()
     DEBUG_LOG("Sending heartbeat");
 
     sendOpcode<voice_opcode::Heartbeat>(rapidjson::Value{++_nonce});
+}
+
+void voice_client::sendResume()
+{
+    DEBUG_LOG("Sending resume");
+
+    rapidjson::Document resume(rapidjson::kObjectType);
+    auto& allocator = resume.GetAllocator();
+
+    rapidjson::Value serverId;
+    serverId.SetString(rapidjson::StringRef(_serverId));
+    rapidjson::Value sessionId;
+    serverId.SetString(rapidjson::StringRef(_sessionId));
+    rapidjson::Value token;
+    serverId.SetString(rapidjson::StringRef(_token));
+
+    resume.AddMember("server_id", std::move(serverId), allocator);
+    resume.AddMember("session_id", std::move(sessionId), allocator);
+    resume.AddMember("token", std::move(token), allocator);
+
+    sendOpcode<voice_opcode::ResumeConnection>(std::move(resume));
 }
 
 void voice_client::sendIdentify()

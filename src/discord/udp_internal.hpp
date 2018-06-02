@@ -14,18 +14,16 @@ namespace detail
 class renter
 {
 public:
-    renter(size_t size);
+    explicit renter(size_t size) noexcept;
 
     renter(const renter& other) = delete;
     renter& operator=(const renter& other) = delete;
 
-    renter(renter&& other);
+    renter(renter&& other) noexcept;
 
-    renter& operator=(renter&& other);
+    renter& operator=(renter&& other) noexcept;
 
-    ~renter();
-
-    std::vector<unsigned char> useBuffer(std::vector<unsigned char>&& buffer);
+    ~renter() noexcept;
 
     std::vector<unsigned char>& buffer();
 
@@ -37,7 +35,8 @@ private:
 class udpSendData
 {
 public:
-    udpSendData(renter&& rent);
+    explicit udpSendData(renter&& rent) noexcept;
+    ~udpSendData() = default;
 
     size_t num_bufs();
 
