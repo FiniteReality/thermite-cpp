@@ -1,6 +1,6 @@
-#include "internal.hpp"
-
 #ifdef THERMITE_DEBUG
+
+#include "debug.hpp"
 
 std::ostream& thermite::discord::operator<<(
     std::ostream& lhs,

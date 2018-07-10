@@ -1,15 +1,11 @@
 #ifndef VOICE_CLIENT_HPP
 #define VOICE_CLIENT_HPP
 
-#include "../thermite.hpp"
-#include "discord/voice_opcode.hpp"
-#include "discord/voice_mode.hpp"
-
-#define RAPIDJSON_HAS_STDSTRING 1
+#include "voice_opcode.hpp"
+#include "voice_mode.hpp"
+#include "voice_callbacks.hpp"
 
 #include <rapidjson/document.h>
-#include <uWS/uWS.h>
-
 #include <string>
 #include <vector>
 
@@ -17,33 +13,6 @@ namespace thermite
 {
 namespace discord
 {
-namespace detail
-{
-
-void onWSMessage(
-    uWS::WebSocket<false>* wsClient,
-    const char* message,
-    size_t size,
-    uWS::OpCode opcode);
-
-void onWSConnect(
-    uWS::WebSocket<false>* wsClient,
-    uWS::HttpRequest);
-
-void onWSDisconnect(
-    uWS::WebSocket<false>* wsClient,
-    int code,
-    const char* message,
-    size_t length);
-
-void onSocketData(
-    uv_udp_t* handle,
-    ssize_t read,
-    const uv_buf_t* buf,
-    const struct sockaddr* addr,
-    unsigned flags);
-
-}
 
 class voice_client
 {
@@ -73,16 +42,21 @@ public:
         const std::string& session,
         const std::string& token);
 
-    /*!\brief Disconnects from Discord
+    /*!\brief Disconnects from Discord.
      */
     void disconnect();
 
     /*!\brief Updates the speaking status with Discord.
+     *
      * \param speaking Set to true to indicate that we intend to send UDP data
+     * \param delay_ms The amount of delay added by Opus
      */
-    void set_speaking(bool speaking);
+    void set_speaking(bool speaking, uint32_t delay_ms = 0);
 
-    /*!\brief Sends an opus packet to Discord
+    /*!\brief Sends an opus packet to Discord.
+     *
+     * \param frame The encoded Opus frame to queue
+     * \param frame_samples The number of samples the frame contains
      */
     void send_opus_packet(
         const std::vector<unsigned char>& frame,
@@ -136,7 +110,7 @@ private:
     void sendHeartbeat();
     void sendResume();
     void sendIdentify();
-    void sendSpeaking(bool isSpeaking);
+    void sendSpeaking(bool isSpeaking, uint32_t delayMs);
 
     void negotiateEncryptionMode(const rapidJsonArray& modes);
     void finishNegotiateEncryptionMode(std::string ip, unsigned short port);

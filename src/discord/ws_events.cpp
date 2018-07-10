@@ -1,5 +1,4 @@
-#include <thermite.hpp>
-#include "internal.hpp"
+#include <thermite/discord/voice_client.hpp>
 
 #include <uWS/uWS.h>
 
@@ -11,7 +10,7 @@ void detail::onWSMessage(
     size_t size,
     uWS::OpCode opcode)
 {
-    auto client = static_cast<thermite::discord::voice_client*>(
+    auto client = static_cast<voice_client*>(
         wsClient->getUserData());
 
     client->onWSMessage(message, size, opcode);
@@ -21,7 +20,7 @@ void detail::onWSConnect(
     uWS::WebSocket<false>* wsClient,
     uWS::HttpRequest)
 {
-    auto client = static_cast<thermite::discord::voice_client*>(
+    auto client = static_cast<voice_client*>(
         wsClient->getUserData());
 
     client->onWSConnect(wsClient);
@@ -33,7 +32,7 @@ void detail::onWSDisconnect(
     const char* msg,
     size_t length)
 {
-    auto client = static_cast<thermite::discord::voice_client*>(
+    auto client = static_cast<voice_client*>(
         wsClient->getUserData());
     std::string message{msg, length};
 

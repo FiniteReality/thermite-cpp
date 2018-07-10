@@ -1,7 +1,6 @@
-#include <thermite.hpp>
-#include <thermite/voice_client.hpp>
+#include <thermite/discord/voice_client.hpp>
 
-#include "internal.hpp"
+#include "../debug.hpp"
 #include "udp_internal.hpp"
 
 #include <sodium.h>

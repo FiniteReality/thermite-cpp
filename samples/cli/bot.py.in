@@ -2,6 +2,7 @@ import subprocess
 import json
 import discord
 import os
+import sys
 
 # config or whatevs
 TOKEN = os.environ['BOT_TOKEN']
@@ -31,7 +32,7 @@ async def on_socket_response(data):
         print("session: " + session)
         print("token: " + token)
 
-        subprocess.Popen(['./cli', guild_id, user_id, endpoint, session, token, "Night_Dancer.raw"], close_fds=True)
+        subprocess.Popen(['./cli', guild_id, user_id, endpoint, session, token, sys.argv[1]], close_fds=True)
 
 
 @client.event

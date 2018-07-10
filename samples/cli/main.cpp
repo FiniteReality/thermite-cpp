@@ -1,5 +1,5 @@
 #include <thermite.hpp>
-#include <thermite/voice_client.hpp>
+#include <thermite/discord/voice_client.hpp>
 
 #include <atomic>
 #include <fstream>
@@ -11,15 +11,12 @@
 // this is a terrible hack.
 namespace thermite
 {
-namespace discord
-{
 namespace detail
 {
 
 // TODO: move this into the main lib somehow to make things easier
 uv_loop_t* getUvLoop();
 
-}
 }
 }
 
@@ -38,7 +35,7 @@ constexpr int FRAME_MILLIS = 20;
 constexpr int FRAME_SIZE = SAMPLES_PER_MS * FRAME_MILLIS;
 constexpr int FRAME_BYTES = FRAME_SIZE * CHANNELS * sizeof(opus_int16);
 
-constexpr int MAX_DATA_SIZE = 4096;
+constexpr int MAX_DATA_SIZE = 8192;
 
 void transcode_thread()
 {
@@ -135,12 +132,14 @@ int main(int argc, char* argv[])
     }
 
     opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_MUSIC));
-    opus_encoder_ctl(encoder, OPUS_SET_PACKET_LOSS_PERC(35));
+    opus_encoder_ctl(encoder, OPUS_SET_BITRATE(320000));
+    opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(10));
+    opus_encoder_ctl(encoder, OPUS_SET_DTX(1));
     opus_encoder_ctl(encoder, OPUS_SET_INBAND_FEC(1));
-    opus_encoder_ctl(encoder, OPUS_SET_BITRATE(96 * 1024));
+    opus_encoder_ctl(encoder, OPUS_SET_PACKET_LOSS_PERC(5));
 
     uv_timer_t timer;
-    uv_timer_init(thermite::discord::detail::getUvLoop(), &timer);
+    uv_timer_init(thermite::detail::getUvLoop(), &timer);
 
     speaking = false;
     transcode = true;

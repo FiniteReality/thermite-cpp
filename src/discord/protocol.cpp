@@ -1,8 +1,8 @@
 #include <algorithm>
 
-#include <thermite.hpp>
-#include <thermite/voice_client.hpp>
+#include <thermite/discord/voice_client.hpp>
 
+#include "../debug.hpp"
 #include "internal.hpp"
 
 using namespace thermite::discord;
@@ -157,13 +157,14 @@ void voice_client::sendIdentify()
     sendOpcode<voice_opcode::Identify>(std::move(identify));
 }
 
-void voice_client::sendSpeaking(bool isSpeaking)
+void voice_client::sendSpeaking(bool isSpeaking, uint32_t delayMs)
 {
     rapidjson::Document speaking(rapidjson::kObjectType);
     auto& allocator = speaking.GetAllocator();
 
     speaking.AddMember("speaking", isSpeaking, allocator);
-    speaking.AddMember("delay", 0, allocator);
+    if (isSpeaking)
+        speaking.AddMember("delay", delayMs, allocator);
     speaking.AddMember("ssrc", _ssrc, allocator);
 
     sendOpcode<voice_opcode::Speaking>(std::move(speaking));

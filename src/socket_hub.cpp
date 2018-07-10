@@ -1,9 +1,13 @@
 #include <thermite.hpp>
+#include <thermite/discord/voice_callbacks.hpp>
+
+#include "debug.hpp"
 #include "discord/internal.hpp"
 
+#include <assert.h>
 #include <uWS/uWS.h>
 
-using namespace thermite::discord;
+using namespace thermite;
 
 static uWS::Hub socketHub;
 static std::map<std::string, std::string> headers;
@@ -15,12 +19,12 @@ void thermite::start_event_loop()
     DEBUG_LOG("event loop returned?");
 }
 
-uv_loop_t* detail::getUvLoop()
+uv_loop_t* thermite::detail::getUvLoop()
 {
     return socketHub.getLoop();
 }
 
-void detail::connect(std::string uri, discord::voice_client* client)
+void discord::detail::connect(std::string uri, discord::voice_client* client)
 {
     socketHub.connect(uri, client, headers);
 }
@@ -37,10 +41,10 @@ public:
 
         #undef GetBotHeader
 
-        socketHub.onConnection(detail::onWSConnect);
-        socketHub.onDisconnection(detail::onWSDisconnect);
+        socketHub.onConnection(discord::detail::onWSConnect);
+        socketHub.onDisconnection(discord::detail::onWSDisconnect);
 
-        socketHub.onMessage(detail::onWSMessage);
+        socketHub.onMessage(discord::detail::onWSMessage);
 
         socketHub.onError([](void*)
         {

@@ -11,12 +11,15 @@ endif(THERMITE_DEBUG)
 
 set(THERMITE_SRCS
 discord/voice_client.cpp discord/ws_events.cpp discord/protocol.cpp
-discord/udp.cpp discord/udp_buffer.cpp discord/debug.cpp
+discord/udp.cpp discord/udp_buffer.cpp
 
-socket_hub.cpp)
+debug.cpp socket_hub.cpp)
 
 add_library(thermite SHARED ${THERMITE_SRCS})
 add_dependencies(thermite uWS)
+target_compile_options(thermite BEFORE PUBLIC
+    -DUSE_LIBUV
+    -DRAPIDJSON_HAS_STDSTRING=1)
 
 target_link_libraries(thermite PUBLIC
     ${uWS_LIBRARIES}
@@ -30,3 +33,6 @@ target_include_directories(thermite PUBLIC
     ${uWS_INCLUDE_DIRS}
     ${TBB_INCLUDE_DIRS}
     ${sodium_INCLUDE_DIRS})
+
+set_property(TARGET thermite PROPERTY CXX_STANDARD 14)
+set_property(TARGET thermite PROPERTY CXX_STANDARD_REQUIRED ON)

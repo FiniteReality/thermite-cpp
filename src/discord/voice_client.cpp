@@ -1,6 +1,6 @@
-#include <thermite.hpp>
-#include <thermite/voice_client.hpp>
+#include <thermite/discord/voice_client.hpp>
 
+#include "../debug.hpp"
 #include "internal.hpp"
 
 #include <rapidjson/prettywriter.h>
@@ -14,10 +14,10 @@ voice_client::voice_client()
     _lastReceivedNonce {0}, _sendAddr {}, _mode{voice_mode::Unknown},
     _secret{}, _sequence{0}, _timestamp{0}, _ssrc{0}, _lastKeepalive{0}
 {
-    uv_timer_init(detail::getUvLoop(), &_heartbeatTimer);
+    uv_timer_init(thermite::detail::getUvLoop(), &_heartbeatTimer);
     _heartbeatTimer.data = this;
 
-    uv_udp_init(detail::getUvLoop(), &_socket);
+    uv_udp_init(thermite::detail::getUvLoop(), &_socket);
     _socket.data = this;
 
     beginUdpReceive();
@@ -54,12 +54,13 @@ void voice_client::disconnect()
 {
     stopUdpReceive();
     uv_timer_stop(&_heartbeatTimer);
-    _webSocket->close();
+    if (_webSocket != nullptr && !_webSocket->isClosed())
+        _webSocket->close();
 }
 
-void voice_client::set_speaking(bool speaking)
+void voice_client::set_speaking(bool speaking, uint32_t delay_ms)
 {
-    sendSpeaking(speaking);
+    sendSpeaking(speaking, delay_ms);
 }
 
 void voice_client::onWSConnect(uWS::WebSocket<false>* client)

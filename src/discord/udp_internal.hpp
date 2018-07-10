@@ -1,5 +1,5 @@
-#ifndef _udp_internal_hpp_
-#define _udp_internal_hpp_
+#ifndef UDP_INTERNAL_HPP
+#define UDP_INTERNAL_HPP
 
 #include <uv.h>
 #include <vector>
@@ -55,4 +55,4 @@ private:
 }
 
 
-#endif /* _udp_internal_hpp_ */
+#endif /* UDP_INTERNAL_HPP */
