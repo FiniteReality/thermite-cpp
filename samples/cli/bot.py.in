@@ -4,12 +4,10 @@ import discord
 import os
 import sys
 
-# config or whatevs
 TOKEN = os.environ['BOT_TOKEN']
 VOICE_GUILD_ID = int(os.environ['BOT_GUILD_ID'])
 VOICE_CHANNEL_ID = int(os.environ['BOT_CHANNEL_ID'])
 
-# program goes here
 client = discord.Client()
 
 @client.event
@@ -33,7 +31,6 @@ async def on_socket_response(data):
         print("token: " + token)
 
         subprocess.Popen(['./cli', guild_id, user_id, endpoint, session, token, sys.argv[1]], close_fds=True)
-
 
 @client.event
 async def on_ready():

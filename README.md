@@ -1,11 +1,15 @@
 # Thermite #
+[![Discord][badge]][discord]
 
-A C++14 voice library for Discord, using uWebSockets and libuv.
+A C++14/C++17 voice framework for Discord, using µWebSockets and libuv.
 
 ## NOTE ##
 
-This is mostly for experimental purposes. If you're looking for a more mature
-voice backend, try looking at [lavaplayer] and its related project, [lavalink]!
+Thermite is for *experimental* purposes only!
+
+Furthermore, Thermite is not even alpha software yet. If you're looking for a
+more mature project, try looking at [lavaplayer] and its related project,
+[lavalink].
 
 ## Building ##
 
@@ -26,7 +30,15 @@ $ make
 
 ### Samples ###
 
-- `cli`: Simple command-line example using discord.py as a frontend
+- `cli` - Small command-line sample using Discord.py rewrite and subprocess
 
+## TODO ##
+
+- CI support
+- Code cleanup
+- Consider Boost.Asio rewrite
+
+[badge]: https://discordapp.com/api/guilds/446775596614418432/widget.png
+[discord]: https://discord.gg/86GFdMY
 [lavaplayer]: https://github.com/sedmelluq/lavaplayer
 [lavalink]: https://github.com/Frederikam/Lavalink
