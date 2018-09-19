@@ -1,0 +1,16 @@
+# TODO: get a proper gitignore
+
+# Build files
+build/
+
+# Compiled binaries
+*.obj
+*.o
+*.a
+*.so
+*.dll
+*.lib
+
+# IDE files
+.kdev4/
+*.kdev4
