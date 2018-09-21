@@ -4,6 +4,7 @@ find_package(Boost 1.62 REQUIRED
 find_package(OpenSSL REQUIRED)
 find_package(TBB REQUIRED)
 find_package(cpprestsdk REQUIRED)
+find_package(sodium REQUIRED)
 
 include(TestBigEndian)
 
@@ -39,13 +40,15 @@ target_link_libraries(thermite PUBLIC
     ${TBB_LIBRARIES}
     ${Boost_LIBRARIES}
     ${OpenSSL_LIBRARIES}
-    ${cpprestsdk_LIBRARIES})
+    ${cpprestsdk_LIBRARIES}
+    ${sodium_LIBRARIES})
 target_include_directories(thermite PUBLIC
     ${RapidJSON_INCLUDE_DIRS}
     ${TBB_INCLUDE_DIRS}
     ${Boost_INCLUDE_DIRS}
     ${OpenSSL_INCLUDE_DIRS}
     ${cpprestsdk_INCLUDE_DIRS}
+    ${sodium_INCLUDE_DIRS}
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>)
 # Disable casablanca defining the U macro, stomping other uses of it
 target_compile_definitions(thermite PUBLIC

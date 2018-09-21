@@ -34,13 +34,13 @@ class voice_client
         pplx::task<void> start();
         pplx::task<void> stop();
 
-        pplx::task<void> set_speaking(bool speaking);
+        pplx::task<void> queue_opus_frame(std::vector<uint8_t> data,
+            std::chrono::milliseconds length);
 
     private:
-        pplx::task<void> send_json(web::json::value&& json);
-
-        pplx::task<void> send_opcode(voice_opcode opcode,
-            web::json::value&& json);
+        pplx::task<std::chrono::milliseconds> transmit_frame(
+            std::chrono::milliseconds length);
+        pplx::task<void> set_speaking(bool speaking);
 
         pplx::task<void> process_websocket_event(
             const web::websockets::client::websocket_incoming_message& message);
@@ -57,6 +57,11 @@ class voice_client
             std::chrono::milliseconds interval,
             std::chrono::milliseconds runover);
 
+        pplx::task<void> send_json(web::json::value&& json);
+
+        pplx::task<void> send_opcode(voice_opcode opcode,
+                                     web::json::value&& json);
+
         const std::string _guild_id, _user_id, _session, _token;
         const web::uri _endpoint;
         bool _hooked_events;
@@ -69,8 +74,11 @@ class voice_client
         uint32_t _nonce;
         uint32_t _received_nonce;
         uint32_t _ssrc;
+        uint32_t _sequence;
+        uint32_t _timestamp;
         std::vector<uint8_t> _secret_key;
-
+        tbb::concurrent_bounded_queue<std::pair<std::vector<uint8_t>,
+            std::chrono::milliseconds>> _frame_queue;
 };
 
 }

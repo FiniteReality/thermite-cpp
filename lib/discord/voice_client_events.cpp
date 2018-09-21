@@ -88,9 +88,9 @@ pplx::task<void> lib::voice_client::process_ready(const json& data)
         return _udp_client.connect(ip, port)
             .then([this]
             {
-                std::vector<uint8_t> discovery(70);
-                auto* data = reinterpret_cast<uint32_t*>(discovery.data());
-                data[0] = utility::to_big_endian(_ssrc);
+                std::vector<uint8_t> discovery;
+                utility::push_back(discovery, utility::to_big_endian(_ssrc));
+                discovery.resize(70);
 
                 return _udp_client.send(discovery)
                     .then([discovery](std::size_t){});
@@ -99,7 +99,7 @@ pplx::task<void> lib::voice_client::process_ready(const json& data)
             {
                 return _udp_client.receive_from(ip, port, 70);
             })
-            .then([this](std::vector<uint8_t> data)
+            .then([](std::vector<uint8_t> data)
             {
                 if (data.size() >= 70)
                 {
@@ -137,10 +137,10 @@ pplx::task<void> lib::voice_client::process_session_description(
     const json& data)
 {
     auto secret_key = data.at("secret_key").as_array();
-    std::transform(secret_key.begin(), secret_key.end(), _secret_key.begin(),
+    std::transform(secret_key.begin(), secret_key.end(),
+        std::back_inserter(_secret_key),
         [](const json& val)
         {
-            // Is this a bad idea? Probably. Oh well.
             return static_cast<uint8_t>(val.as_number().to_uint32());
         });
 
@@ -160,13 +160,11 @@ pplx::task<void> lib::voice_client::process_hello(const json& data)
         .to_double();
 
     auto heartbeat_task = pplx::create_task([this, interval_ms]
-        {
-            return do_heartbeat(std::chrono::milliseconds(interval_ms),
-                std::chrono::milliseconds::zero());
-        },
-        _disconnect_token_source.get_token());
+    {
+        return do_heartbeat(std::chrono::milliseconds(interval_ms),
+            std::chrono::milliseconds::zero());
+    }, _disconnect_token_source.get_token());
 
-    // TODO: identify
     return send_opcode(voice_opcode::Identify, json::object({
         {"server_id", json::string(_guild_id)},
         {"user_id", json::string(_user_id)},
