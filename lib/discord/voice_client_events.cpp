@@ -1,10 +1,10 @@
 #include <algorithm>
 #include <stdexcept>
 #include <thermite/discord/voice_client.hpp>
+#include <thermite/extra/pplx_extras.hpp>
 #include <thermite/logging.hpp>
 
 #include <extra/net_utils.hpp>
-#include <extra/pplx_extras.hpp>
 
 namespace ws = web::websockets::client;
 namespace lib = thermite::discord;
@@ -34,8 +34,7 @@ pplx::task<void> lib::voice_client::process_event(const json& json)
                 case voice_opcode::SessionDescription:
                     return process_session_description(json.at("d"));
                 case voice_opcode::Speaking:
-                    throw std::domain_error(
-                        "received op 5 (SPEAKING) unexpectedly");
+                    return pplx::completed_task();
                 case voice_opcode::HeartbeatAck:
                     return process_heartbeat_ack(json.at("d"));
                 case voice_opcode::ResumeConnection:
@@ -121,9 +120,11 @@ pplx::task<void> lib::voice_client::process_ready(const json& data)
             {
                 return send_opcode(voice_opcode::SelectProtocol, json::object({
                     {"protocol", json::string("udp")},
-                    {"ip", json::string(our_ip_info.first)},
-                    {"port", json::number(our_ip_info.second)},
-                    {"mode", json::string("xsalsa20_poly1305_lite")}
+                    {"data", json::object({
+                        {"ip", json::string(our_ip_info.first)},
+                        {"port", json::number(our_ip_info.second)},
+                        {"mode", json::string("xsalsa20_poly1305_lite")}
+                    })},
                 }));
             });
     }
@@ -141,8 +142,11 @@ pplx::task<void> lib::voice_client::process_session_description(
         std::back_inserter(_secret_key),
         [](const json& val)
         {
-            return static_cast<uint8_t>(val.as_number().to_uint32());
+            return val.as_number().to_int32();
         });
+
+    thermite::log("Processed session description, got secret key at ",
+        _secret_key.size(), " bytes");
 
     return pplx::completed_task();
 }
@@ -173,7 +177,7 @@ pplx::task<void> lib::voice_client::process_hello(const json& data)
     }));
 }
 
-pplx::task<void> lib::voice_client::process_resumed(const json& data)
+pplx::task<void> lib::voice_client::process_resumed(const json&)// data)
 {
     return pplx::completed_task();
 }

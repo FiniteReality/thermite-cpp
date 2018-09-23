@@ -23,12 +23,11 @@ constexpr T swap_endianness(T value)
 template <typename Container, typename T,
     size_t N = sizeof(T),
     typename std::enable_if<std::is_integral<T>::value>::type* = nullptr>
-constexpr void push_back(Container container, T value)
+constexpr void push_back(Container& container, T value)
 {
     using Container_ptr = typename std::add_pointer<
         typename Container::value_type>::type;
 
-    auto size = container.size();
     Container_ptr data = reinterpret_cast<Container_ptr>(&value);
     std::copy(data, data + N, std::back_inserter(container));
 }
@@ -65,7 +64,7 @@ template <typename Container, typename T,
     typename std::enable_if<std::is_integral<T>::value>::type* = nullptr,
     typename std::enable_if<std::is_same<uint8_t,
         typename Container::value_type>::value>::type* = nullptr>
-constexpr void push_back(Container container, T value)
+constexpr void push_back(Container& container, T value)
 {
     return detail::push_back(container, value);
 }

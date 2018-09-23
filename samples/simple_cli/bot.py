@@ -41,7 +41,6 @@ async def on_ready():
     await client.ws.send(json.dumps({
         'op': 4,
         'd': {
-            'self_deaf': True,
             'guild_id': VOICE_GUILD_ID,
             'channel_id': VOICE_CHANNEL_ID
         }

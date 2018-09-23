@@ -34,14 +34,12 @@ class voice_client
         pplx::task<void> start();
         pplx::task<void> stop();
 
-        pplx::task<void> queue_opus_frame(std::vector<uint8_t> data,
-            std::chrono::milliseconds length);
-
-    private:
-        pplx::task<std::chrono::milliseconds> transmit_frame(
-            std::chrono::milliseconds length);
         pplx::task<void> set_speaking(bool speaking);
 
+        pplx::task<std::chrono::milliseconds> transmit_frame(
+            std::vector<uint8_t> frame, uint32_t samples);
+
+    private:
         pplx::task<void> process_websocket_event(
             const web::websockets::client::websocket_incoming_message& message);
 
@@ -74,11 +72,9 @@ class voice_client
         uint32_t _nonce;
         uint32_t _received_nonce;
         uint32_t _ssrc;
-        uint32_t _sequence;
+        uint16_t _sequence;
         uint32_t _timestamp;
         std::vector<uint8_t> _secret_key;
-        tbb::concurrent_bounded_queue<std::pair<std::vector<uint8_t>,
-            std::chrono::milliseconds>> _frame_queue;
 };
 
 }
