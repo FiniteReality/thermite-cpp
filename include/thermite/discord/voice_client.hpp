@@ -29,7 +29,7 @@ class voice_client
         voice_client(voice_client&&) = default;
         voice_client& operator=(voice_client &&) = default;
 
-        ~voice_client() = default;
+        ~voice_client();
 
         pplx::task<void> start();
         pplx::task<void> stop();
