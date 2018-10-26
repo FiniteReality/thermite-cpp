@@ -194,13 +194,22 @@ pplx::task<void> lib::voice_client::do_heartbeat(
         throw std::runtime_error("nonce mismatch");
     }
 
+    if (pplx::is_task_cancellation_requested())
+        return pplx::completed_task();
+
     return pplx::wait_for(std::chrono::milliseconds(interval) - runover)
         .then([this, interval](std::chrono::milliseconds runover)
         {
+            if (pplx::is_task_cancellation_requested())
+                return pplx::completed_task();
+
             return send_opcode(voice_opcode::Heartbeat,
                 json::number(++_nonce))
                 .then([this, interval, runover]
                 {
+                    if (pplx::is_task_cancellation_requested())
+                        return pplx::completed_task();
+
                     return do_heartbeat(interval, runover);
                 });
         });

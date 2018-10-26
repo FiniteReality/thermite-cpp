@@ -40,6 +40,13 @@ lib::voice_client::voice_client(std::string guild_id, std::string user_id,
         _sequence{0}, _timestamp{0}, _secret_key{}
 { }
 
+lib::voice_client::~voice_client()
+{
+    _disconnect_token_source.cancel();
+    // TODO: may cause deadlocks, this should be tested
+    _ws_client.close().get();
+}
+
 pplx::task<void> lib::voice_client::start()
 {
     if (_disconnect_token_source.get_token().is_canceled())
