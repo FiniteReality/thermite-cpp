@@ -58,7 +58,7 @@ pplx::task<std::chrono::milliseconds> pplx::detail::_wait_for(
 
 const pplx::task<void> pplx::completed_task()
 {
-    static pplx::task_completion_event<void> promise;
+    thread_local pplx::task_completion_event<void> promise;
 
     if (!promise._IsTriggered())
         promise.set();

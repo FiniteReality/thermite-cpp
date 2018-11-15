@@ -32,7 +32,8 @@ extra/pplx_extras.cpp
 udp/udp_client.cpp
 
 # core lib
-discord/voice_client.cpp discord/voice_client_events.cpp)
+discord/voice_client.cpp discord/voice_client_impl.cpp
+discord/voice_client_events.cpp player.cpp)
 
 
 add_library(thermite SHARED ${THERMITE_SRCS})
@@ -55,6 +56,4 @@ target_compile_definitions(thermite PUBLIC
     -D_TURN_OFF_PLATFORM_STRING
     -DTURN_OFF_PLATFORM_STRING)
 
-
-set_property(TARGET thermite PROPERTY CXX_STANDARD 17)
-set_property(TARGET thermite PROPERTY CXX_STANDARD_REQUIRED ON)
+target_compile_features(thermite PUBLIC cxx_std_17)

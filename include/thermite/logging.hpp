@@ -9,8 +9,13 @@ constexpr void log(Ts&&... messages);
 
 #if defined(THERMITE_DEBUG) && !defined(THERMITE_EXTERNAL_LOGGING)
 
+}
+
 // debug mode and external logging is disabled, log to stdout
 #include <iostream>
+
+namespace thermite
+{
 
 template <typename... Ts>
 constexpr void log(Ts&&... messages)
@@ -29,6 +34,6 @@ constexpr void log(Ts&&...)
 
 #endif
 
-};
+}
 
 #endif /* _THERMITE_LOGGING_HPP_ */

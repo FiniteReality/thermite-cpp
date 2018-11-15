@@ -1,40 +1,35 @@
-#ifndef _VOICE_CLIENT_HPP_
-#define _VOICE_CLIENT_HPP_
+#ifndef _VOICE_CLIENT_IMPL_HPP_
+#define _VOICE_CLIENT_IMPL_HPP_
 
 #include <cpprest/ws_client.h>
 #include <cpprest/json.h>
 #include <pplx/pplxtasks.h>
 #include <string>
+#include <tbb/concurrent_queue.h>
 
-#include <thermite/memory/memory.hpp>
-#include "voice_opcode.hpp"
+#include <thermite/discord/voice_client.hpp>
+#include <thermite/udp/udp_client.hpp>
 
-namespace thermite::discord
+namespace thermite::discord::detail
 {
 
-namespace detail
-{
-    class voice_client_impl;
-}
-
-
-class voice_client
+class voice_client_impl
 {
 public:
-    voice_client(std::string guild_id, std::string user_id,
+    voice_client_impl(std::string guild_id, std::string user_id,
         std::string endpoint, std::string session, std::string token) noexcept;
 
-    voice_client(std::string guild_id, std::string user_id,
+    voice_client_impl(std::string guild_id, std::string user_id,
         std::string endpoint, std::string session, std::string token,
         web::websockets::client::websocket_client_config ws_config) noexcept;
 
-    voice_client(const voice_client&) = default;
-    voice_client& operator=(const voice_client&) = default;
+    voice_client_impl(const voice_client_impl&) = default;
+    voice_client_impl& operator=(const voice_client_impl&) = default;
 
-    voice_client(voice_client&&) = default;
-    voice_client& operator=(voice_client &&) = default;
+    voice_client_impl(voice_client_impl&&) = default;
+    voice_client_impl& operator=(voice_client_impl &&) = default;
 
-    ~voice_client() = default;
+    ~voice_client_impl();
 
     pplx::task<void> start();
     pplx::task<void> stop();
@@ -63,13 +58,26 @@ private:
     pplx::task<void> send_json(web::json::value&& json);
 
     pplx::task<void> send_opcode(voice_opcode opcode,
-                                    web::json::value&& json);
+        web::json::value&& json);
+    const std::string _guild_id, _user_id, _session, _token;
+    const web::uri _endpoint;
+    bool _hooked_events;
 
-    std::shared_ptr<detail::voice_client_impl> _impl;
+    web::websockets::client::websocket_callback_client _ws_client;
+    thermite::udp::udp_client _udp_client;
+    pplx::cancellation_token_source _disconnect_token_source;
+
+    // TODO: these may benefit from either locking or atomicity
+    uint32_t _nonce;
+    uint32_t _received_nonce;
+    uint32_t _ssrc;
+    uint16_t _sequence;
+    uint32_t _timestamp;
+    std::vector<uint8_t> _secret_key;
+
+    friend voice_client;
 };
 
 }
 
-#endif /* _VOICE_CLIENT_HPP_ */
-
-// kate: indent-mode cstyle; indent-width 4; replace-tabs on;
+#endif /* _VOICE_CLIENT_IMPL_HPP_ */

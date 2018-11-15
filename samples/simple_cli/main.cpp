@@ -2,6 +2,7 @@
 #include "pstream.h"
 #include <thread>
 #include <opus/opus.h>
+#include <tbb/concurrent_queue.h>
 
 #include <thermite/discord/voice_client.hpp>
 #include <thermite/extra/pplx_extras.hpp>
@@ -13,7 +14,7 @@ constexpr int FRAME_MILLIS = 20;
 constexpr int FRAME_SIZE = SAMPLES_PER_MS * FRAME_MILLIS;
 constexpr int FRAME_BYTES = FRAME_SIZE * CHANNELS * sizeof(opus_int16);
 
-constexpr int MAX_DATA_SIZE = 8192;
+constexpr int MAX_DATA_SIZE = 1<<16;
 
 tbb::concurrent_bounded_queue<std::vector<uint8_t>> transcoded_frames;
 
@@ -26,7 +27,12 @@ void transcode_work(std::string file)
         OPUS_APPLICATION_AUDIO,
         &status);
 
-    std::ifstream input{file, std::ios_base::binary};
+    std::ifstream input_file;
+
+    if (file != "-")
+        input_file.open(file, std::ios_base::binary);
+
+    std::istream& input = input_file.is_open() ? input_file : std::cin;
 
     if (status != OPUS_OK)
     {
@@ -85,7 +91,7 @@ void transmit_work(pplx::task_completion_event<void>& connected,
         {
             int samples = opus_packet_get_samples_per_frame(frame.data(),
                 SAMPLE_RATE);
-            client.transmit_frame(frame, samples)
+            client.transmit_frame(thermite::memory::memory(frame), samples)
                 .then([](std::chrono::milliseconds time)
                 {
                     return pplx::wait_for(

@@ -1,16 +1,16 @@
 #include <algorithm>
+#include <extra/net_utils.hpp>
 #include <stdexcept>
-#include <thermite/discord/voice_client.hpp>
 #include <thermite/extra/pplx_extras.hpp>
 #include <thermite/logging.hpp>
 
-#include <extra/net_utils.hpp>
+#include "voice_client_impl.hpp"
 
 namespace ws = web::websockets::client;
-namespace lib = thermite::discord;
+namespace lib = thermite::discord::detail;
 using json = web::json::value;
 
-pplx::task<void> lib::voice_client::process_event(const json& json)
+pplx::task<void> lib::voice_client_impl::process_event(const json& json)
 {
     return pplx::create_task(
         [this, json]()
@@ -21,15 +21,15 @@ pplx::task<void> lib::voice_client::process_event(const json& json)
             switch(op)
             {
                 case voice_opcode::Identify:
-                    throw std::domain_error(
+                    throw std::runtime_error(
                         "received op 0 (VOICE_IDENTIFY) unexpectedly");
                 case voice_opcode::SelectProtocol:
-                    throw std::domain_error(
+                    throw std::runtime_error(
                         "received op 1 (SELECT_PROTOCOL) unexpectedly");
                 case voice_opcode::Ready:
                     return process_ready(json.at("d"));
                 case voice_opcode::Heartbeat:
-                    throw std::domain_error(
+                    throw std::runtime_error(
                         "received op 3 (HEARTBEAT) unexpectedly");
                 case voice_opcode::SessionDescription:
                     return process_session_description(json.at("d"));
@@ -38,7 +38,7 @@ pplx::task<void> lib::voice_client::process_event(const json& json)
                 case voice_opcode::HeartbeatAck:
                     return process_heartbeat_ack(json.at("d"));
                 case voice_opcode::ResumeConnection:
-                    throw std::domain_error(
+                    throw std::runtime_error(
                         "received op 7 (RESUME_CONNECTION) unexpectedly");
                 case voice_opcode::Hello:
                     return process_hello(json.at("d"));
@@ -63,7 +63,7 @@ pplx::task<void> lib::voice_client::process_event(const json& json)
         });
 }
 
-pplx::task<void> lib::voice_client::process_ready(const json& data)
+pplx::task<void> lib::voice_client_impl::process_ready(const json& data)
 {
     _ssrc = data.at("ssrc").as_number().to_uint32();
 
@@ -134,7 +134,7 @@ pplx::task<void> lib::voice_client::process_ready(const json& data)
     }
 }
 
-pplx::task<void> lib::voice_client::process_session_description(
+pplx::task<void> lib::voice_client_impl::process_session_description(
     const json& data)
 {
     auto secret_key = data.at("secret_key").as_array();
@@ -151,13 +151,13 @@ pplx::task<void> lib::voice_client::process_session_description(
     return pplx::completed_task();
 }
 
-pplx::task<void> lib::voice_client::process_heartbeat_ack(const json& data)
+pplx::task<void> lib::voice_client_impl::process_heartbeat_ack(const json& data)
 {
     _received_nonce = data.as_integer();
     return pplx::completed_task();
 }
 
-pplx::task<void> lib::voice_client::process_hello(const json& data)
+pplx::task<void> lib::voice_client_impl::process_hello(const json& data)
 {
     auto interval_ms = (int)data.at("heartbeat_interval")
         .as_number()
@@ -177,12 +177,12 @@ pplx::task<void> lib::voice_client::process_hello(const json& data)
     }));
 }
 
-pplx::task<void> lib::voice_client::process_resumed(const json&)// data)
+pplx::task<void> lib::voice_client_impl::process_resumed(const json&)// data)
 {
     return pplx::completed_task();
 }
 
-pplx::task<void> lib::voice_client::do_heartbeat(
+pplx::task<void> lib::voice_client_impl::do_heartbeat(
     std::chrono::milliseconds interval,
     std::chrono::milliseconds runover)
 {
