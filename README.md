@@ -3,6 +3,8 @@
 A C++17 voice framework for Discord, using Boost.Asio and Microsoft's
 cpprestsdk.
 
+Feel free to join my Discord server: https://discord.gg/Y4d9ZWJ
+
 ## NOTE ##
 
 Thermite is for *experimental* purposes only!
